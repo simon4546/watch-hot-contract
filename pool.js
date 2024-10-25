@@ -45,7 +45,7 @@ async function handleNewBlock(blockHeader) {
 }
 
 async function processSwapEvent(tx, sender, token1, token1Name, amount0, amount1) {
-    if (amount1 < '0.3') return
+    if (amount1 < '0.25') return
     const currentTime = moment.tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
     db.run(`INSERT INTO freq_trades (tx,sender,token1,token1Name, amount0, amount1,timestamp) VALUES (?,?, ?, ?, ?, ?,?)`,
         [tx, sender, token1, token1Name, amount0, amount1, currentTime],

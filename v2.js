@@ -46,7 +46,7 @@ class RouterV2 {
             await this.callback(tx.hash, tx.from, tokenAddress, tokenName, 0, value)
         }
         if (method.startsWith('swapExactTokensForTokensSupportingFeeOnTransferTokens') && tokenName != "WETH") {
-            value = web3.utils.fromWei(decoded.amountIn, "ether")
+            value = this.web3.utils.fromWei(decoded.amountIn, "ether")
             console.log(method, tokenAddress, tokenName);
             await this.callback(tx.hash, tx.from, tokenAddress, tokenName, 0, value)
         }
