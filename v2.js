@@ -12,11 +12,13 @@ const ERC20_ABI = JSON.parse(fs.readFileSync("./abi/erc20.json"), "utf8");
 
 
 class RouterV2 {
-    constructor(web3, callback) {
+    constructor(web3,cache,callback) {
         this.contract = new web3.eth.Contract(UNISWAP_ROUTER_ABI, UNISWAP_ROUTER_ADDRESS);
-        this.web3 = web3
+        this.web3=web3
+        this.cache=cache;
         this.callback = callback;
     }
+
 
     doit(tx) {
         if (tx.to && tx.to.toLowerCase() === UNISWAP_ROUTER_ADDRESS.toLowerCase() && (
@@ -32,15 +34,24 @@ class RouterV2 {
             console.log("-----------------------------------------------------")
         }
     }
-
+    async getTokenName(address) {
+        let cached = this.cache.get(`name-${address}`);
+        let tokenName;
+        if (!cached) {
+            const erc20 = new this.web3.eth.Contract(ERC20_ABI, address);
+            tokenName = await erc20.methods.symbol().call()
+            console.log(tokenName, address)
+            this.cache.set(`name-${address}`, tokenName)
+        }
+        return this.cache.get(`name-${address}`)
+    }
     async handleRouter(tx) {
         const decoded = this.contract.decodeMethodData(tx.input);
         const tokenAddress = decoded.path.at(-1)
-        const token0Address = decoded.path.at(0)
+        // const token0Address = decoded.path.at(0)
         const method = decoded.__method__
         let value = this.web3.utils.fromWei(tx.value, "ether")
-        const erc20 = new this.web3.eth.Contract(ERC20_ABI, tokenAddress);
-        const tokenName = await erc20.methods.symbol().call()
+        const tokenName = await this.getTokenName(tokenAddress)
         if (method.startsWith('swapExactETHForTokens') || method.startsWith('swapExactETHForTokensSupportingFeeOnTransferTokens')) {
             console.log(method, value, tokenAddress, tokenName);
             await this.callback(tx.hash, tx.from, tokenAddress, tokenName, 0, value)

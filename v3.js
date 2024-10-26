@@ -2,8 +2,9 @@ const fs = require('fs');
 const excludes = ["USDT", "USDC", "WBTC"]
 const ERC20_ABI = JSON.parse(fs.readFileSync("./abi/erc20.json"), "utf8");
 class RouterV3 {
-    constructor(web3,callback) {
-        this.web3=web3
+    constructor(web3, cache, callback) {
+        this.web3 = web3
+        this.cache = cache;
         this.callback = callback;
     }
 
@@ -25,7 +26,17 @@ class RouterV3 {
 
         }
     }
-
+    async getTokenName(address) {
+        let cached = this.cache.get(`name-${address}`);
+        let tokenName;
+        if (!cached) {
+            const erc20 = new this.web3.eth.Contract(ERC20_ABI, address);
+            tokenName = await erc20.methods.symbol().call()
+            console.log(tokenName, address)
+            this.cache.set(`name-${address}`, tokenName)
+        }
+        return this.cache.get(`name-${address}`)
+    }
     async handleRouter(tx) {
         if (tx.input.length < 1500) return;
         let method = tx.input.substring(266, 274)
@@ -42,9 +53,7 @@ class RouterV3 {
         if (coin) {
             try {
                 let address = `0x${coin}`
-                const erc20 = new this.web3.eth.Contract(ERC20_ABI, address);
-                const tokenName = await erc20.methods.symbol().call()
-                console.log(tokenName, address)
+                const tokenName = await this.getTokenName(address)
                 if (!excludes.includes(tokenName)) {
                     await this.callback(tx.hash, tx.from, address, tokenName, 0, value)
                 }

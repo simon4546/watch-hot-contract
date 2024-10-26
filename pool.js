@@ -14,24 +14,28 @@ const bot = new TelegramBot(TOKEN, { polling: true });
 
 const web3 = new Web3('wss://mainnet.infura.io/ws/v3/6e6a3c3e676b4ab1ad7a7126b70169e9');
 
-let v2 = new Routerv2(web3, processSwapEvent)
-let v3 = new Routerv3(web3, processSwapEvent)
+let v2 = new Routerv2(web3, cache, processSwapEvent)
+let v3 = new Routerv3(web3, cache, processSwapEvent)
 
 const timeZone = 'Asia/Shanghai';
 // SQLite database
 const db = new sqlite3.Database('./uniswap_trades1.db');
 
 // 初始化数据库
-db.run(`CREATE TABLE IF NOT EXISTS freq_trades (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sender TEXT,
-    token1 TEXT,
-    token1Name TEXT,
-    amount0 TEXT,
-    amount1 TEXT,
-    tx TEXT UNIQUE,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
+db.run(`
+    CREATE TABLE IF NOT EXISTS freq_trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender TEXT,
+        token1 TEXT,
+        token1Name TEXT,
+        amount0 TEXT,
+        amount1 TEXT,
+        tx TEXT UNIQUE,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX freq_trades_timestamp_idx ON freq_trades (timestamp);
+    CREATE INDEX freq_trades_token1_idx ON freq_trades (token1);
+`);
 
 
 async function subscribeToNewBlocks() {
