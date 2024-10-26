@@ -5,6 +5,7 @@
     "moment-timezone": "^0.5.46",
     "node-telegram-bot-api": "^0.66.0",
     "sqlite3": "^5.1.7",
+    "ttl-cache": "^1.0.2",
     "web3": "^4.13.0"
   }
 }

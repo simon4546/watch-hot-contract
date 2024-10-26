@@ -5,7 +5,10 @@ const Routerv3 = require('./v3');
 const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-
+var Cache = require('ttl-cache'), cache = new Cache({
+    ttl: 600,
+    interval: 10
+});
 const TOKEN = process.env.TOKEN;
 const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -64,9 +67,13 @@ async function findNew() {
 
 function _findNew() {
     const currentTime = moment.tz(timeZone).subtract(5, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-    db.each("select token1,token1Name,count(token1) as cnt from freq_trades where timestamp > ? group by token1 HAVING cnt > 5 ORDER BY cnt desc", [currentTime], (err, row) => {
+    db.each("select token1,token1Name,count(distinct sender) as people,count(token1) as cnt from freq_trades where timestamp > ? group by token1 HAVING cnt > 1 ORDER BY cnt desc", [currentTime], (err, row) => {
         console.log(row.cnt, row.token1, row.token1Name);
-        bot.sendMessage('@chaisiye111', `${row.token1Name}\n${row.token1}\n${row.cnt}次`);
+        let cached = cache.get(row.token1);
+        if (cached != 1) {
+            bot.sendMessage('@chaisiye111', `${row.token1Name}\n${row.token1}\n${row.cnt}次\n${row.people}人`);
+            cache.set(row.token1, 1)
+        }
     });
 }
 
