@@ -1,6 +1,11 @@
 let { WebSocket } = require("ws")
 const moment = require('moment-timezone');
 const sqlite3 = require('sqlite3').verbose();
+const TelegramBot = require('node-telegram-bot-api');
+require('dotenv').config();
+const TOKEN = process.env.TOKEN;
+const bot = new TelegramBot(TOKEN, { polling: true });
+
 const db = new sqlite3.Database('./pump.db');
 // 初始化数据库
 db.run(`
@@ -9,9 +14,9 @@ db.run(`
         sender TEXT,
         token TEXT UNIQUE,
         tokenName TEXT,
-        followers TEXT,
+        followers INTEGER,
         tokenSymbol TEXT,
-        cnt TEXT,
+        cnt INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 `);
@@ -32,6 +37,7 @@ ws.on('message', function message(data) {
     let tokenName = data.name;
     let tokenSymbol = data.symbol;
     let creator = data.traderPublicKey;
+    console.log("SOL", data.vSolInBondingCurve, data.marketCapSol)
     const currentTime = moment.tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
     db.run(`INSERT INTO pumptoken (sender,token,tokenName,tokenSymbol, cnt,timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
         [creator, tokenaddr, tokenName, tokenSymbol, -1, currentTime],
@@ -40,9 +46,9 @@ ws.on('message', function message(data) {
 function apiFunctionWrapper() {
     let unread = [];
     return new Promise((resolve, reject) => {
-        db.each("select * from pumptoken where cnt=-1 or cnt is null limit 1", [], (err, row) => {
+        db.each("select * from pumptoken where cnt=-1 or cnt is null order by id desc limit 1", [], (err, row) => {
             if (err) { reject(err) };
-            unread.push(row.sender)
+            unread.push([row.sender, row.token])
         }, function (err, result) {
             if (err) { reject(err) };
             resolve(unread);
@@ -63,20 +69,30 @@ function sleep(ms) {
 }
 async function getProfile(sender) {
     try {
-        let url = `https://frontend-api.pump.fun/coins/user-created-coins/${sender}?offset=0&limit=10&includeNsfw=false`
+        let url = `https://frontend-api.pump.fun/coins/user-created-coins/${sender[0]}?offset=0&limit=10&includeNsfw=false`
         let response = await fetch(url)
+        if (!response.ok) {
+            throw new Error(`Response status: ${response.status}`);
+        }
         result = await response.json();
         let lens = result.length;
 
-        url = `https://frontend-api.pump.fun/following/followers/${sender}`
+        url = `https://frontend-api.pump.fun/following/followers/${sender[0]}`
         response = await fetch(url)
+        if (!response.ok) {
+            throw new Error(`Response status: ${response.status}`);
+        }
         result = await response.json();
         let followers = result.length;
-
+        if (followers > 80) {
+            bot.sendMessage('@chaisiye111', `发币次数${lens}\n粉丝数${followers}\n合约地址:${sender[1]}`);
+        }
         db.run(`UPDATE pumptoken set cnt=?,followers=? where sender=?`,
             [lens, followers, sender],
             function (err) { });
-    } catch (ex) { }
+    } catch (ex) {
+        console.log(ex)
+    }
 }
 
 (async function () {
