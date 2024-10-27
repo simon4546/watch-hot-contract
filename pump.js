@@ -17,6 +17,7 @@ db.run(`
         followers INTEGER,
         tokenSymbol TEXT,
         cnt INTEGER,
+        scnt INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 `);
@@ -69,14 +70,14 @@ function sleep(ms) {
 }
 async function getProfile(sender) {
     try {
-        let url = `https://frontend-api.pump.fun/coins/user-created-coins/${sender[0]}?offset=0&limit=10&includeNsfw=false`
+        let url = `https://frontend-api.pump.fun/coins/user-created-coins/${sender[0]}?offset=0&limit=20&includeNsfw=false`
         let response = await fetch(url)
         if (!response.ok) {
             throw new Error(`Response status: ${response.status}`);
         }
         result = await response.json();
         let lens = result.length;
-
+        let success_count = result.filter((item, idx) => item.complete == true).length
         url = `https://frontend-api.pump.fun/following/followers/${sender[0]}`
         response = await fetch(url)
         if (!response.ok) {
@@ -84,11 +85,11 @@ async function getProfile(sender) {
         }
         result = await response.json();
         let followers = result.length;
-        if (followers > 80) {
-            bot.sendMessage('@chaisiye111', `发币次数${lens}\n粉丝数${followers}\n合约地址:${sender[1]}`);
+        if (followers > 80 && success_count > 0) {
+            bot.sendMessage('@chaisiye111', `发币次数${lens}\n成功次数:${success_count}\n粉丝数${followers}\n合约地址:${sender[1]}`);
         }
-        db.run(`UPDATE pumptoken set cnt=?,followers=? where sender=? and ( cnt=-1 or cnt is null )`,
-            [lens, followers, sender[0]],
+        db.run(`UPDATE pumptoken set cnt=?,followers=?,scnt=? where sender=? and ( cnt=-1 or cnt is null )`,
+            [lens, followers, success_count, sender[0]],
             function (err) { });
     } catch (ex) {
         console.log(ex)
