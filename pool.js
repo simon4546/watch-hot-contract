@@ -6,7 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 var Cache = require('ttl-cache'), cache = new Cache({
-    ttl: 600,
+    ttl: 1200,
     interval: 10
 });
 const TOKEN = process.env.TOKEN;
@@ -70,8 +70,8 @@ async function findNew() {
 }
 
 function _findNew() {
-    const currentTime = moment.tz(timeZone).subtract(5, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-    db.each("select token1,token1Name,count(distinct sender) as people,count(token1) as cnt from freq_trades where timestamp > ? group by token1 HAVING cnt > 5 ORDER BY cnt desc", [currentTime], (err, row) => {
+    const currentTime = moment.tz(timeZone).subtract(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    db.each("select token1,token1Name,count(distinct sender) as people,count(token1) as cnt from freq_trades where timestamp > ? group by token1 HAVING cnt > 15 ORDER BY cnt desc", [currentTime], (err, row) => {
         if (err) return;
         console.log(row.cnt, row.token1, row.token1Name);
         let cached = cache.get(row.token1);
