@@ -87,8 +87,8 @@ async function getProfile(sender) {
         if (followers > 80) {
             bot.sendMessage('@chaisiye111', `发币次数${lens}\n粉丝数${followers}\n合约地址:${sender[1]}`);
         }
-        db.run(`UPDATE pumptoken set cnt=?,followers=? where sender=?`,
-            [lens, followers, sender],
+        db.run(`UPDATE pumptoken set cnt=?,followers=? where sender=? and ( cnt=-1 or cnt is null )`,
+            [lens, followers, sender[0]],
             function (err) { });
     } catch (ex) {
         console.log(ex)
